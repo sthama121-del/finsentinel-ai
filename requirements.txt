@@ -1,0 +1,64 @@
+# FinSentinel AI - Python Dependencies
+# Python >= 3.11 required
+
+# ─── Core Framework ────────────────────────────────────────────────────────────
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.7.0
+
+# ─── LangChain (LLM Orchestration) ────────────────────────────────────────────
+langchain==0.3.13
+langchain-core==0.3.28
+langchain-community==0.3.13
+langchain-ollama==0.2.2
+langchain-openai==0.2.14
+langchain-anthropic==0.3.0
+langchain-chroma==0.1.4
+
+# ─── Vector Stores ─────────────────────────────────────────────────────────────
+chromadb==0.5.23
+qdrant-client==1.12.1
+
+# ─── Document Loaders ─────────────────────────────────────────────────────────
+pypdf==5.1.0
+unstructured==0.16.11
+
+# ─── Event Streaming ───────────────────────────────────────────────────────────
+aiokafka==0.11.0
+
+# ─── Databases ─────────────────────────────────────────────────────────────────
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.36
+redis[hiredis]==5.2.1
+
+# ─── Security ──────────────────────────────────────────────────────────────────
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+
+# ─── Observability ─────────────────────────────────────────────────────────────
+opentelemetry-api==1.29.0
+opentelemetry-sdk==1.29.0
+opentelemetry-instrumentation-fastapi==0.50b0
+prometheus-client==0.21.1
+structlog==24.4.0
+
+# ─── Azure SDK (Optional Cloud) ────────────────────────────────────────────────
+azure-identity==1.19.0
+azure-storage-file-datalake==12.19.0
+azure-search-documents==11.6.0
+azure-cosmos==4.9.0
+
+# ─── Utilities ─────────────────────────────────────────────────────────────────
+httpx==0.28.1
+aiofiles==24.1.0
+python-dotenv==1.0.1
+tenacity==9.0.0
+pydantic-extra-types==2.10.1
+
+# ─── Testing ───────────────────────────────────────────────────────────────────
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+pytest-cov==6.0.0

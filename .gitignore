@@ -1,0 +1,59 @@
+# FinSentinel AI - .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Data & Models (too large for git)
+data/raw/
+data/processed/
+data/embeddings/
+data/chroma_db/
+*.pkl
+*.parquet
+*.bin
+*.onnx
+
+# Secrets
+*.pem
+*.key
+*.crt
+secrets/
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# OS
+Thumbs.db

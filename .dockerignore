@@ -1,0 +1,35 @@
+# Airflow logs - causes build context errors
+airflow/logs/
+airflow/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+venv/
+env/
+.venv/
+
+# Data
+data/raw/
+data/processed/
+data/embeddings/
+data/chroma_db/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Env files
+.env
+.env.*
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage

@@ -1,0 +1,212 @@
+# FinSentinel AI - Kubernetes Deployment (AKS / Local)
+# Deploy with: kubectl apply -f infrastructure/k8s/
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finsentinel
+  labels:
+    app.kubernetes.io/name: finsentinel-ai
+
+---
+# ─── ConfigMap ────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finsentinel-config
+  namespace: finsentinel
+data:
+  APP_NAME: "FinSentinel AI"
+  ENVIRONMENT: "production"
+  LLM_PROVIDER: "azure_openai"
+  VECTOR_STORE: "azure_cognitive_search"
+  LOG_LEVEL: "INFO"
+  PII_MASKING_ENABLED: "true"
+  AUDIT_LOG_ENABLED: "true"
+  LLM_CACHE_ENABLED: "true"
+
+---
+# ─── Secret (reference Azure Key Vault in production) ─────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: finsentinel-secrets
+  namespace: finsentinel
+type: Opaque
+stringData:
+  SECRET_KEY: "REPLACE_WITH_VAULT_SECRET"
+  AZURE_OPENAI_API_KEY: "REPLACE_WITH_VAULT_SECRET"
+  POSTGRES_URL: "REPLACE_WITH_VAULT_SECRET"
+  REDIS_URL: "REPLACE_WITH_VAULT_SECRET"
+
+---
+# ─── API Deployment ───────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finsentinel-api
+  namespace: finsentinel
+  labels:
+    app: finsentinel-api
+    version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: finsentinel-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: finsentinel-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8002"
+    spec:
+      serviceAccountName: finsentinel-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: finsentinel-api
+          image: YOUR_ACR.azurecr.io/finsentinel-ai:1.0.0
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8002
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: finsentinel-config
+            - secretRef:
+                name: finsentinel-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/live
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: data-volume
+              mountPath: /app/data
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: finsentinel-data-pvc
+
+---
+# ─── API Service ──────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: finsentinel-api-svc
+  namespace: finsentinel
+spec:
+  selector:
+    app: finsentinel-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+
+---
+# ─── Ingress (Azure Application Gateway) ─────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finsentinel-ingress
+  namespace: finsentinel
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+        - finsentinel.yourdomain.com
+      secretName: finsentinel-tls
+  rules:
+    - host: finsentinel.yourdomain.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: finsentinel-api-svc
+                port:
+                  number: 80
+
+---
+# ─── HorizontalPodAutoscaler ──────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: finsentinel-api-hpa
+  namespace: finsentinel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: finsentinel-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# ─── PVC (Azure Disk / Azure Files) ──────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: finsentinel-data-pvc
+  namespace: finsentinel
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+# ─── ServiceAccount ───────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: finsentinel-sa
+  namespace: finsentinel
+  annotations:
+    azure.workload.identity/client-id: "YOUR_MANAGED_IDENTITY_CLIENT_ID"
